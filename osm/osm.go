@@ -191,8 +191,12 @@ func (c *Client) SaveNode(n *Node, cs *Changeset) error {
 		urlPath = fmt.Sprintf("/node/%d", n.ID)
 	}
 
+	n.Changeset = cs.ID
+
+	data := Wrap{Nodes: []*Node{n}}
+
 	body := bytes.NewBuffer([]byte{})
-	if err := xml.NewEncoder(body).Encode(n); err != nil {
+	if err := xml.NewEncoder(body).Encode(data); err != nil {
 		return err
 	}
 
