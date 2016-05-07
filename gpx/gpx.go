@@ -6,6 +6,7 @@ import (
 	"time"
 )
 
+// GPX represents the contents of an GPX file
 type GPX struct {
 	XMLName  xml.Name `xml:"gpx"`
 	Metadata struct {
@@ -24,6 +25,7 @@ type GPX struct {
 	Waypoints []Waypoint `xml:"wpt"`
 }
 
+// Waypoint represents a single waypoint inside a GPX file
 type Waypoint struct {
 	XMLName     xml.Name  `xml:"wpt"`
 	Latitude    float64   `xml:"lat,attr"`
@@ -37,6 +39,7 @@ type Waypoint struct {
 	Type        string    `xml:"type"`
 }
 
+// ParseGPXData reads the contents of the GPX file and returns a parsed version
 func ParseGPXData(in io.Reader) (*GPX, error) {
 	out := &GPX{}
 	return out, xml.NewDecoder(in).Decode(out)
