@@ -239,7 +239,8 @@ func main() {
 		}
 	}
 
-	mapData, err := osmClient.RetrieveMapObjects(minLon, minLat, maxLon, maxLat)
+	border := 0.00009 // Equals ~10m using haversine formula
+	mapData, err := osmClient.RetrieveMapObjects(minLon-border, minLat-border, maxLon+border, maxLat+border)
 	if err != nil {
 		log.Fatalf("Unable to get map data: %s", err)
 	}
