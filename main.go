@@ -239,6 +239,10 @@ func main() {
 		}
 	}
 
+	if cfg.Debug {
+		log.Printf("Working on Changeset %d", cs.ID)
+	}
+
 	border := 0.00009 // Equals ~10m using haversine formula
 	mapData, err := osmClient.RetrieveMapObjects(minLon-border, minLat-border, maxLon+border, maxLat+border)
 	if err != nil {
@@ -274,6 +278,9 @@ func main() {
 				log.Printf("[NOOP] Would send a create to OSM (Changeset %d): %#v", cs.ID, h.ToNode())
 			} else {
 				osmClient.SaveNode(h.ToNode(), cs)
+				if cfg.Debug {
+					log.Printf("Created a hydrant: %s", h.Name)
+				}
 			}
 			continue
 		}
@@ -296,6 +303,9 @@ func main() {
 			log.Printf("[NOOP] Would send a change to OSM (Changeset %d): To=%#v From=%#v", cs.ID, h.ToNode(), found.ToNode())
 		} else {
 			osmClient.SaveNode(h.ToNode(), cs)
+			if cfg.Debug {
+				log.Printf("Changed a hydrant: %s", h.Name)
+			}
 		}
 	}
 }
