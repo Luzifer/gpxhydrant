@@ -38,6 +38,7 @@ func init() {
 
 	if cfg.VersionAndExit {
 		fmt.Printf("gpxhydrant %s\n", version)
+		os.Exit(0)
 	}
 
 	if cfg.GPXFile == "" {
