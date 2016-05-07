@@ -27,7 +27,7 @@ var (
 			UseDev   bool   `flag:"osm-dev" default:"false" description:"Switch to dev API"`
 		}
 		MachRange int64  `flag:"match-range" default:"20" description:"Range of meters to match GPX hydrants to OSM nodes"`
-		Comment   string `flag:"comment,c" description:"Comment for the changeset"`
+		Comment   string `flag:"comment,c" default:"Added hydrants from GPX file" description:"Comment for the changeset"`
 	}{}
 	version = "dev"
 
@@ -233,7 +233,7 @@ func main() {
 	if len(changeSets) > 0 {
 		cs = changeSets[0]
 	} else {
-		cs, err = osmClient.CreateChangeset(cfg.Comment)
+		cs, err = osmClient.CreateChangeset()
 		if err != nil {
 			log.Fatalf("Unable to create changeset: %s", err)
 		}
@@ -241,6 +241,15 @@ func main() {
 
 	if cfg.Debug {
 		log.Printf("Working on Changeset %d", cs.ID)
+	}
+
+	cs.Tags = []osm.Tag{
+		{Key: "comment", Value: cfg.Comment},
+		{Key: "created_by", Value: fmt.Sprintf("gpxhydrant %s", version)},
+	}
+
+	if err := osmClient.SaveChangeset(cs); err != nil {
+		log.Fatalf("Unable to save changeset: %s", err)
 	}
 
 	border := 0.0009 // Equals ~100m using haversine formula

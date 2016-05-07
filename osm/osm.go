@@ -12,7 +12,7 @@ import (
 )
 
 const (
-	liveAPIBaseURL = "http://api.openstreetmap.org/api/0.6"
+	liveAPIBaseURL = "http://api-openstreetmap-org-ue6z91hlm5oj.runscope.net/api/0.6" // "http://api.openstreetmap.org/api/0.6"
 	devAPIBaseURL  = "http://api06.dev.openstreetmap.org/api/0.6"
 )
 
@@ -129,7 +129,7 @@ func (c *Client) GetMyChangesets(onlyOpen bool) ([]*Changeset, error) {
 	return r.Changesets, c.doParse("GET", urlPath, nil, r)
 }
 
-func (c *Client) CreateChangeset(comment string) (*Changeset, error) {
+func (c *Client) CreateChangeset() (*Changeset, error) {
 	body := bytes.NewBuffer([]byte{})
 	if err := xml.NewEncoder(body).Encode(Wrap{Changesets: []*Changeset{{}}}); err != nil {
 		return nil, err
@@ -150,6 +150,24 @@ func (c *Client) CreateChangeset(comment string) (*Changeset, error) {
 	}
 
 	return cs.Changesets[0], nil
+}
+
+func (c *Client) SaveChangeset(cs *Changeset) error {
+	urlPath := "/changeset/create"
+
+	if cs.ID > 0 {
+		urlPath = fmt.Sprintf("/changeset/%d", cs.ID)
+	}
+
+	data := Wrap{Changesets: []*Changeset{cs}}
+
+	body := bytes.NewBuffer([]byte{})
+	if err := xml.NewEncoder(body).Encode(data); err != nil {
+		return err
+	}
+
+	_, err := c.doPlain("PUT", urlPath, body)
+	return err
 }
 
 func (c *Client) RetrieveMapObjects(minLat, minLon, maxLat, maxLon float64) (*Wrap, error) {
