@@ -9,6 +9,21 @@ import (
 	"github.com/Luzifer/gpxhydrant/osm"
 )
 
+var (
+	hydrantPositions = map[string]string{
+		"S": "sidewalk",
+		"P": "parking_lot",
+		"L": "lane",
+		"G": "green",
+	}
+	hydrantTypes = map[string]string{
+		"U": "underground",
+		"O": "pillar",
+		"W": "wall",
+		"P": "pond",
+	}
+)
+
 type hydrant struct {
 	/*
 	   <node lat="53.58963" lon="9.70838">
@@ -45,27 +60,8 @@ func parseWaypoint(in gpx.Waypoint) (*hydrant, error) {
 		Pressure:  cfg.Pressure,
 	}
 
-	switch matches[1] {
-	case "S":
-		out.Position = "sidewalk"
-	case "P":
-		out.Position = "parking_lot"
-	case "L":
-		out.Position = "lane"
-	case "G":
-		out.Position = "green"
-	}
-
-	switch matches[2] {
-	case "U":
-		out.Type = "underground"
-	case "O":
-		out.Type = "pillar"
-	case "W":
-		out.Type = "wall"
-	case "P":
-		out.Type = "pond"
-	}
+	out.Position = hydrantPositions[matches[1]]
+	out.Type = hydrantTypes[matches[2]]
 
 	if matches[3] != "?" {
 		diameter, err := strconv.ParseInt(matches[3], 10, 64)
@@ -93,9 +89,7 @@ func fromNode(in *osm.Node) (*hydrant, error) {
 	for _, t := range in.Tags {
 		switch t.Key {
 		case "emergency":
-			if t.Value == "fire_hydrant" {
-				validFireHydrant = true
-			}
+			validFireHydrant = t.Value == "fire_hydrant"
 		case "fire_hydrant:diameter":
 			if out.Diameter, e = strconv.ParseInt(t.Value, 10, 64); e != nil {
 				return nil, e
