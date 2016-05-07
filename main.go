@@ -15,18 +15,18 @@ import (
 
 var (
 	cfg = struct {
-		GPXFile        string `flag:"gpx-file,f" description:"File containing GPX waypoints"`
-		NoOp           bool   `flag:"noop,n" default:"true" description:"Fetch data from OSM but do not write"`
-		VersionAndExit bool   `flag:"version" default:"false" description:"Print version and exit"`
-		Pressure       int64  `flag:"pressure" default:"4" description:"Pressure of the water grid"`
-		Debug          bool   `flag:"debug,d" default:"false" description:"Enable debug logging"`
-		OSM            struct {
+		Comment   string `flag:"comment,c" default:"Added hydrants from GPX file" description:"Comment for the changeset"`
+		Debug     bool   `flag:"debug,d" default:"false" description:"Enable debug logging"`
+		GPXFile   string `flag:"gpx-file,f" description:"File containing GPX waypoints"`
+		MachRange int64  `flag:"match-range" default:"20" description:"Range of meters to match GPX hydrants to OSM nodes"`
+		NoOp      bool   `flag:"noop,n" default:"true" description:"Fetch data from OSM but do not write"`
+		OSM       struct {
 			Username string `flag:"osm-user" description:"Username to log into OSM"`
 			Password string `flag:"osm-pass" description:"Password for osm-user"`
 			UseDev   bool   `flag:"osm-dev" default:"false" description:"Switch to dev API"`
 		}
-		MachRange int64  `flag:"match-range" default:"20" description:"Range of meters to match GPX hydrants to OSM nodes"`
-		Comment   string `flag:"comment,c" default:"Added hydrants from GPX file" description:"Comment for the changeset"`
+		Pressure       int64 `flag:"pressure" default:"4" description:"Pressure of the water grid"`
+		VersionAndExit bool  `flag:"version" default:"false" description:"Print version and exit"`
 	}{}
 	version = "dev"
 
