@@ -19,7 +19,7 @@ var (
 		Debug     bool   `flag:"debug,d" default:"false" description:"Enable debug logging"`
 		GPXFile   string `flag:"gpx-file,f" description:"File containing GPX waypoints"`
 		MachRange int64  `flag:"match-range" default:"20" description:"Range of meters to match GPX hydrants to OSM nodes"`
-		NoOp      bool   `flag:"noop,n" default:"true" description:"Fetch data from OSM but do not write"`
+		NoOp      bool   `flag:"noop,n" default:"false" description:"Fetch data from OSM but do not write"`
 		OSM       struct {
 			Username string `flag:"osm-user" description:"Username to log into OSM"`
 			Password string `flag:"osm-pass" description:"Password for osm-user"`
