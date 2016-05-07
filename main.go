@@ -30,6 +30,8 @@ var (
 	}{}
 	version = "dev"
 
+	changeset *osm.Changeset
+
 	errWrongGPXComment = errors.New("GPX comment does not match expected format")
 )
 
@@ -107,6 +109,10 @@ func hydrantsFromGPXFile() ([]*hydrant, bounds) {
 }
 
 func createChangeset(osmClient *osm.Client) *osm.Changeset {
+	if changeset != nil {
+		return changeset
+	}
+
 	cs, err := osmClient.CreateChangeset()
 	if err != nil {
 		log.Fatalf("Unable to create changeset: %s", err)
@@ -122,6 +128,8 @@ func createChangeset(osmClient *osm.Client) *osm.Changeset {
 	if err := osmClient.SaveChangeset(cs); err != nil {
 		log.Fatalf("Unable to save changeset: %s", err)
 	}
+
+	changeset = cs
 
 	return cs
 }
@@ -157,16 +165,13 @@ func main() {
 		log.Fatalf("Unable to log into OSM: %s", err)
 	}
 
-	// Create a changeset for this import
-	cs := createChangeset(osmClient)
-
 	// Retrieve currently available information from OSM
 	availableHydrants := getHydrantsFromOSM(osmClient, bds)
 
-	updateOrCreateHydrants(hydrants, availableHydrants, cs, osmClient)
+	updateOrCreateHydrants(hydrants, availableHydrants, osmClient)
 }
 
-func updateOrCreateHydrants(hydrants, availableHydrants []*hydrant, cs *osm.Changeset, osmClient *osm.Client) {
+func updateOrCreateHydrants(hydrants, availableHydrants []*hydrant, osmClient *osm.Client) {
 	for _, h := range hydrants {
 		var found *hydrant
 		for _, a := range availableHydrants {
@@ -179,9 +184,9 @@ func updateOrCreateHydrants(hydrants, availableHydrants []*hydrant, cs *osm.Chan
 		if found == nil {
 			// No matched hydrant: Lets create one
 			doNoOp(
-				fmt.Sprintf("[NOOP] Would send a create to OSM (Changeset %d): %#v", cs.ID, h.ToNode()),
+				fmt.Sprintf("[NOOP] Would send a create to OSM (Changeset %d): %#v", createChangeset(osmClient).ID, h.ToNode()),
 				func() {
-					if err := osmClient.SaveNode(h.ToNode(), cs); err != nil {
+					if err := osmClient.SaveNode(h.ToNode(), createChangeset(osmClient)); err != nil {
 						log.Fatalf("Unable to create node using the OSM API: %s", err)
 					}
 					logDebugf("Created a hydrant: %s", h.Name)
@@ -204,9 +209,9 @@ func updateOrCreateHydrants(hydrants, availableHydrants []*hydrant, cs *osm.Chan
 		h.ID = found.ID
 		h.Version = found.Version
 		doNoOp(
-			fmt.Sprintf("[NOOP] Would send a change to OSM (Changeset %d): To=%#v From=%#v", cs.ID, h.ToNode(), found.ToNode()),
+			fmt.Sprintf("[NOOP] Would send a change to OSM (Changeset %d): To=%#v From=%#v", createChangeset(osmClient).ID, h.ToNode(), found.ToNode()),
 			func() {
-				if err := osmClient.SaveNode(h.ToNode(), cs); err != nil {
+				if err := osmClient.SaveNode(h.ToNode(), createChangeset(osmClient)); err != nil {
 					log.Fatalf("Unable to create node using the OSM API: %s", err)
 				}
 				logDebugf("Changed a hydrant: %s", h.Name)
