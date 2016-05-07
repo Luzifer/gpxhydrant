@@ -205,14 +205,16 @@ func main() {
 		}
 		hydrants = append(hydrants, h)
 
-		switch {
-		case minLat > h.Latitude:
+		if minLat > h.Latitude {
 			minLat = h.Latitude
-		case maxLat < h.Latitude:
+		}
+		if maxLat < h.Latitude {
 			maxLat = h.Latitude
-		case minLon > h.Longitude:
+		}
+		if minLon > h.Longitude {
 			minLon = h.Longitude
-		case maxLon < h.Longitude:
+		}
+		if maxLon < h.Longitude {
 			maxLon = h.Longitude
 		}
 	}
