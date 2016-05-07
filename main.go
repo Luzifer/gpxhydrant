@@ -18,7 +18,7 @@ var (
 		Comment   string `flag:"comment,c" default:"Added hydrants from GPX file" description:"Comment for the changeset"`
 		Debug     bool   `flag:"debug,d" default:"false" description:"Enable debug logging"`
 		GPXFile   string `flag:"gpx-file,f" description:"File containing GPX waypoints"`
-		MachRange int64  `flag:"match-range" default:"20" description:"Range of meters to match GPX hydrants to OSM nodes"`
+		MachRange int64  `flag:"match-range" default:"5" description:"Range of meters to match GPX hydrants to OSM nodes"`
 		NoOp      bool   `flag:"noop,n" default:"false" description:"Fetch data from OSM but do not write"`
 		OSM       struct {
 			Username string `flag:"osm-user" description:"Username to log into OSM"`
