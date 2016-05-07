@@ -44,6 +44,10 @@ func init() {
 	if cfg.GPXFile == "" {
 		log.Fatalf("gpx-file is a required parameter")
 	}
+
+	if cfg.OSM.Password == "" || cfg.OSM.Username == "" {
+		log.Fatalf("osm-pass / osm-user are required parameters")
+	}
 }
 
 func main() {
