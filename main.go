@@ -50,6 +50,12 @@ func init() {
 	}
 }
 
+func logDebugf(format string, values ...interface{}) {
+	if cfg.Debug {
+		log.Printf(format, values...)
+	}
+}
+
 func main() {
 	gpsFile, err := os.Open(cfg.GPXFile)
 	if err != nil {
@@ -76,9 +82,7 @@ func main() {
 			}
 			continue
 		}
-		if cfg.Debug {
-			log.Printf("Found a hydrant from waypoint %s: %#v", wp.Name, h)
-		}
+		logDebugf("Found a hydrant from waypoint %s: %#v", wp.Name, h)
 		hydrants = append(hydrants, h)
 
 		if minLat > h.Latitude {
@@ -115,9 +119,7 @@ func main() {
 		}
 	}
 
-	if cfg.Debug {
-		log.Printf("Working on Changeset %d", cs.ID)
-	}
+	logDebugf("Working on Changeset %d", cs.ID)
 
 	cs.Tags = []osm.Tag{
 		{Key: "comment", Value: cfg.Comment},
@@ -134,9 +136,7 @@ func main() {
 		log.Fatalf("Unable to get map data: %s", err)
 	}
 
-	if cfg.Debug {
-		log.Printf("Retrieved %d nodes from map", len(mapData.Nodes))
-	}
+	logDebugf("Retrieved %d nodes from map", len(mapData.Nodes))
 
 	availableHydrants := []*hydrant{}
 	for _, n := range mapData.Nodes {
@@ -163,9 +163,7 @@ func main() {
 				log.Printf("[NOOP] Would send a create to OSM (Changeset %d): %#v", cs.ID, h.ToNode())
 			} else {
 				osmClient.SaveNode(h.ToNode(), cs)
-				if cfg.Debug {
-					log.Printf("Created a hydrant: %s", h.Name)
-				}
+				logDebugf("Created a hydrant: %s", h.Name)
 			}
 			continue
 		}
@@ -175,9 +173,7 @@ func main() {
 		}
 
 		if h.Diameter == found.Diameter && h.Position == found.Position && h.Pressure == found.Pressure && h.Type == found.Type {
-			if cfg.Debug {
-				log.Printf("Found a good looking hydrant which needs no update: %#v", h)
-			}
+			logDebugf("Found a good looking hydrant which needs no update: %#v", h)
 			// Everything matches, we don't care
 			continue
 		}
@@ -188,9 +184,7 @@ func main() {
 			log.Printf("[NOOP] Would send a change to OSM (Changeset %d): To=%#v From=%#v", cs.ID, h.ToNode(), found.ToNode())
 		} else {
 			osmClient.SaveNode(h.ToNode(), cs)
-			if cfg.Debug {
-				log.Printf("Changed a hydrant: %s", h.Name)
-			}
+			logDebugf("Changed a hydrant: %s", h.Name)
 		}
 	}
 }
