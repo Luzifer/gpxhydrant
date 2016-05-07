@@ -33,6 +33,23 @@ var (
 	errWrongGPXComment = errors.New("GPX comment does not match expected format")
 )
 
+type bounds struct{ MinLat, MinLon, MaxLat, MaxLon float64 }
+
+func (b *bounds) Update(lat, lon float64) {
+	if b.MinLat > lat {
+		b.MinLat = lat
+	}
+	if b.MaxLat < lat {
+		b.MaxLat = lat
+	}
+	if b.MinLon > lon {
+		b.MinLon = lon
+	}
+	if b.MaxLon < lon {
+		b.MaxLon = lon
+	}
+}
+
 func init() {
 	rconfig.Parse(&cfg)
 
@@ -56,7 +73,8 @@ func logDebugf(format string, values ...interface{}) {
 	}
 }
 
-func main() {
+func hydrantsFromGPXFile() ([]*hydrant, bounds) {
+	// Read and parse GPX file
 	gpsFile, err := os.Open(cfg.GPXFile)
 	if err != nil {
 		log.Fatalf("Unable to open your GPX file: %s", err)
@@ -68,12 +86,9 @@ func main() {
 		log.Fatalf("Unable to parse your GPX file: %s", err)
 	}
 
+	bds := bounds{MinLat: 9999, MinLon: 9999}
 	hydrants := []*hydrant{}
-	var (
-		minLat         = 9999.0
-		minLon         = 9999.0
-		maxLat, maxLon float64
-	)
+
 	for _, wp := range gpxData.Waypoints {
 		h, e := parseWaypoint(wp)
 		if e != nil {
@@ -85,38 +100,16 @@ func main() {
 		logDebugf("Found a hydrant from waypoint %s: %#v", wp.Name, h)
 		hydrants = append(hydrants, h)
 
-		if minLat > h.Latitude {
-			minLat = h.Latitude
-		}
-		if maxLat < h.Latitude {
-			maxLat = h.Latitude
-		}
-		if minLon > h.Longitude {
-			minLon = h.Longitude
-		}
-		if maxLon < h.Longitude {
-			maxLon = h.Longitude
-		}
+		bds.Update(h.Latitude, h.Longitude)
 	}
 
-	osmClient, err := osm.New(cfg.OSM.Username, cfg.OSM.Password, cfg.OSM.UseDev)
+	return hydrants, bds
+}
+
+func createChangeset(osmClient *osm.Client) *osm.Changeset {
+	cs, err := osmClient.CreateChangeset()
 	if err != nil {
-		log.Fatalf("Unable to log into OSM: %s", err)
-	}
-
-	changeSets, err := osmClient.GetMyChangesets(true)
-	if err != nil {
-		log.Fatalf("Unable to get changesets: %s", err)
-	}
-
-	var cs *osm.Changeset
-	if len(changeSets) > 0 {
-		cs = changeSets[0]
-	} else {
-		cs, err = osmClient.CreateChangeset()
-		if err != nil {
-			log.Fatalf("Unable to create changeset: %s", err)
-		}
+		log.Fatalf("Unable to create changeset: %s", err)
 	}
 
 	logDebugf("Working on Changeset %d", cs.ID)
@@ -130,8 +123,12 @@ func main() {
 		log.Fatalf("Unable to save changeset: %s", err)
 	}
 
+	return cs
+}
+
+func getHydrantsFromOSM(osmClient *osm.Client, bds bounds) []*hydrant {
 	border := 0.0009 // Equals ~100m using haversine formula
-	mapData, err := osmClient.RetrieveMapObjects(minLon-border, minLat-border, maxLon+border, maxLat+border)
+	mapData, err := osmClient.RetrieveMapObjects(bds.MaxLon, bds.MinLat-border, bds.MaxLon+border, bds.MaxLat+border)
 	if err != nil {
 		log.Fatalf("Unable to get map data: %s", err)
 	}
@@ -142,12 +139,34 @@ func main() {
 	for _, n := range mapData.Nodes {
 		h, e := fromNode(n)
 		if e != nil {
-			continue
+			continue // Not a hydrant, ignore that node
 		}
 
 		availableHydrants = append(availableHydrants, h)
 	}
 
+	return availableHydrants
+}
+
+func main() {
+	// Convert waypoints from GPX file to hydrants
+	hydrants, bds := hydrantsFromGPXFile()
+
+	osmClient, err := osm.New(cfg.OSM.Username, cfg.OSM.Password, cfg.OSM.UseDev)
+	if err != nil {
+		log.Fatalf("Unable to log into OSM: %s", err)
+	}
+
+	// Create a changeset for this import
+	cs := createChangeset(osmClient)
+
+	// Retrieve currently available information from OSM
+	availableHydrants := getHydrantsFromOSM(osmClient, bds)
+
+	updateOrCreateHydrants(hydrants, availableHydrants, cs, osmClient)
+}
+
+func updateOrCreateHydrants(hydrants, availableHydrants []*hydrant, cs *osm.Changeset, osmClient *osm.Client) {
 	for _, h := range hydrants {
 		var found *hydrant
 		for _, a := range availableHydrants {
@@ -159,22 +178,24 @@ func main() {
 
 		if found == nil {
 			// No matched hydrant: Lets create one
-			if cfg.NoOp {
-				log.Printf("[NOOP] Would send a create to OSM (Changeset %d): %#v", cs.ID, h.ToNode())
-			} else {
-				if err := osmClient.SaveNode(h.ToNode(), cs); err != nil {
-					log.Fatalf("Unable to create node using the OSM API: %s", err)
-				}
-				logDebugf("Created a hydrant: %s", h.Name)
-			}
+			doNoOp(
+				fmt.Sprintf("[NOOP] Would send a create to OSM (Changeset %d): %#v", cs.ID, h.ToNode()),
+				func() {
+					if err := osmClient.SaveNode(h.ToNode(), cs); err != nil {
+						log.Fatalf("Unable to create node using the OSM API: %s", err)
+					}
+					logDebugf("Created a hydrant: %s", h.Name)
+				},
+			)
 			continue
 		}
 
+		// Special case: If the diameter of the recorded hydrant is unknown but previously known keep the previous version
 		if h.Diameter == 0 && found.Diameter > 0 {
 			h.Diameter = found.Diameter
 		}
 
-		if h.Diameter == found.Diameter && h.Position == found.Position && h.Pressure == found.Pressure && h.Type == found.Type {
+		if !found.NeedsUpdate(h) {
 			logDebugf("Found a good looking hydrant which needs no update: %#v", h)
 			// Everything matches, we don't care
 			continue
@@ -182,15 +203,25 @@ func main() {
 
 		h.ID = found.ID
 		h.Version = found.Version
-		if cfg.NoOp {
-			log.Printf("[NOOP] Would send a change to OSM (Changeset %d): To=%#v From=%#v", cs.ID, h.ToNode(), found.ToNode())
-		} else {
-			if err := osmClient.SaveNode(h.ToNode(), cs); err != nil {
-				log.Fatalf("Unable to create node using the OSM API: %s", err)
-			}
-			logDebugf("Changed a hydrant: %s", h.Name)
-		}
+		doNoOp(
+			fmt.Sprintf("[NOOP] Would send a change to OSM (Changeset %d): To=%#v From=%#v", cs.ID, h.ToNode(), found.ToNode()),
+			func() {
+				if err := osmClient.SaveNode(h.ToNode(), cs); err != nil {
+					log.Fatalf("Unable to create node using the OSM API: %s", err)
+				}
+				logDebugf("Changed a hydrant: %s", h.Name)
+			},
+		)
 	}
+}
+
+func doNoOp(message string, execution func()) {
+	if cfg.NoOp {
+		log.Println(message)
+		return
+	}
+
+	execution()
 }
 
 func roundPrec(in float64, nd int) float64 {

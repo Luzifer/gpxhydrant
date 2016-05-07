@@ -130,3 +130,7 @@ func (h hydrant) ToNode() *osm.Node {
 
 	return out
 }
+
+func (h hydrant) NeedsUpdate(in *hydrant) bool {
+	return h.Diameter != in.Diameter || h.Position != in.Position || h.Pressure != in.Pressure || h.Type != in.Type
+}
