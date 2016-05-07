@@ -31,7 +31,7 @@ var (
 	}{}
 	version = "dev"
 
-	wrongGPXComment = errors.New("GPX comment does not match expected format")
+	errWrongGPXComment = errors.New("GPX comment does not match expected format")
 )
 
 type hydrant struct {
@@ -59,7 +59,7 @@ type hydrant struct {
 func parseWaypoint(in gpx.Waypoint) (*hydrant, error) {
 	infoRegex := regexp.MustCompile(`([SPLG])([UOWP])(\?|[0-9]{2,3})`)
 	if !infoRegex.MatchString(in.Comment) {
-		return nil, wrongGPXComment
+		return nil, errWrongGPXComment
 	}
 
 	matches := infoRegex.FindStringSubmatch(in.Comment)
@@ -195,7 +195,7 @@ func main() {
 	for _, wp := range gpxData.Waypoints {
 		h, e := parseWaypoint(wp)
 		if e != nil {
-			if cfg.Debug || e != wrongGPXComment {
+			if cfg.Debug || e != errWrongGPXComment {
 				log.Printf("Found waypoint not suitable for converting: %s (Reason: %s)", wp.Name, e)
 			}
 			continue
