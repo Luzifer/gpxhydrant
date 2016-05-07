@@ -243,7 +243,7 @@ func main() {
 		log.Printf("Working on Changeset %d", cs.ID)
 	}
 
-	border := 0.00009 // Equals ~10m using haversine formula
+	border := 0.0009 // Equals ~100m using haversine formula
 	mapData, err := osmClient.RetrieveMapObjects(minLon-border, minLat-border, maxLon+border, maxLat+border)
 	if err != nil {
 		log.Fatalf("Unable to get map data: %s", err)
