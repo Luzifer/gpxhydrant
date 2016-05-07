@@ -162,7 +162,9 @@ func main() {
 			if cfg.NoOp {
 				log.Printf("[NOOP] Would send a create to OSM (Changeset %d): %#v", cs.ID, h.ToNode())
 			} else {
-				osmClient.SaveNode(h.ToNode(), cs)
+				if err := osmClient.SaveNode(h.ToNode(), cs); err != nil {
+					log.Fatalf("Unable to create node using the OSM API: %s", err)
+				}
 				logDebugf("Created a hydrant: %s", h.Name)
 			}
 			continue
@@ -183,7 +185,9 @@ func main() {
 		if cfg.NoOp {
 			log.Printf("[NOOP] Would send a change to OSM (Changeset %d): To=%#v From=%#v", cs.ID, h.ToNode(), found.ToNode())
 		} else {
-			osmClient.SaveNode(h.ToNode(), cs)
+			if err := osmClient.SaveNode(h.ToNode(), cs); err != nil {
+				log.Fatalf("Unable to create node using the OSM API: %s", err)
+			}
 			logDebugf("Changed a hydrant: %s", h.Name)
 		}
 	}
