@@ -136,7 +136,7 @@ func createChangeset(osmClient *osm.Client) *osm.Changeset {
 
 func getHydrantsFromOSM(osmClient *osm.Client, bds bounds) []*hydrant {
 	border := 0.0009 // Equals ~100m using haversine formula
-	mapData, err := osmClient.RetrieveMapObjects(bds.MaxLon, bds.MinLat-border, bds.MaxLon+border, bds.MaxLat+border)
+	mapData, err := osmClient.RetrieveMapObjects(bds.MinLon-border, bds.MinLat-border, bds.MaxLon+border, bds.MaxLat+border)
 	if err != nil {
 		log.Fatalf("Unable to get map data: %s", err)
 	}
