@@ -3,7 +3,6 @@ package main
 import (
 	"errors"
 	"fmt"
-	"log"
 	"os"
 	"strconv"
 
@@ -11,13 +10,15 @@ import (
 	"github.com/Luzifer/gpxhydrant/gpx"
 	"github.com/Luzifer/gpxhydrant/osm"
 	"github.com/Luzifer/rconfig"
+	log "github.com/Sirupsen/logrus"
 )
 
 var (
 	cfg = struct {
 		Comment   string `flag:"comment,c" default:"Added hydrants from GPX file" description:"Comment for the changeset"`
-		Debug     bool   `flag:"debug,d" default:"false" description:"Enable debug logging"`
+		Debug     bool   `flag:"debug,d" default:"false" description:"Enable debug logging (Deprecated: Use --log-level=debug)"`
 		GPXFile   string `flag:"gpx-file,f" description:"File containing GPX waypoints"`
+		LogLevel  string `flag:"log-level" default:"info" description:"Log level (debug, info, warn, error)"`
 		MachRange int64  `flag:"match-range" default:"5" description:"Range of meters to match GPX hydrants to OSM nodes"`
 		NoOp      bool   `flag:"noop,n" default:"false" description:"Fetch data from OSM but do not write"`
 		OSM       struct {
@@ -60,18 +61,23 @@ func init() {
 		os.Exit(0)
 	}
 
+	if l, err := log.ParseLevel(cfg.LogLevel); err == nil {
+		log.SetLevel(l)
+	} else {
+		log.Fatalf("Unable to parse log level: %s", err)
+	}
+
+	// Support deprecated parameter to overwrite log level
+	if cfg.Debug {
+		log.SetLevel(log.DebugLevel)
+	}
+
 	if cfg.GPXFile == "" {
 		log.Fatalf("gpx-file is a required parameter")
 	}
 
 	if cfg.OSM.Password == "" || cfg.OSM.Username == "" {
 		log.Fatalf("osm-pass / osm-user are required parameters")
-	}
-}
-
-func logDebugf(format string, values ...interface{}) {
-	if cfg.Debug {
-		log.Printf(format, values...)
 	}
 }
 
@@ -94,12 +100,12 @@ func hydrantsFromGPXFile() ([]*hydrant, bounds) {
 	for _, wp := range gpxData.Waypoints {
 		h, e := parseWaypoint(wp)
 		if e != nil {
-			if cfg.Debug || e != errWrongGPXComment {
-				log.Printf("Found waypoint not suitable for converting: %s (Reason: %s)", wp.Name, e)
+			if e != errWrongGPXComment {
+				log.Debugf("Found waypoint not suitable for converting: %s (Reason: %s)", wp.Name, e)
 			}
 			continue
 		}
-		logDebugf("Found a hydrant from waypoint %s: %#v", wp.Name, h)
+		log.Debugf("Found a hydrant from waypoint %s: %#v", wp.Name, h)
 		hydrants = append(hydrants, h)
 
 		bds.Update(h.Latitude, h.Longitude)
@@ -118,10 +124,10 @@ func createChangeset(osmClient *osm.Client) *osm.Changeset {
 		log.Fatalf("Unable to create changeset: %s", err)
 	}
 
-	logDebugf("Working on Changeset %d", cs.ID)
+	log.Debugf("Working on Changeset %d", cs.ID)
 
 	cs.Tags = []osm.Tag{
-		{Key: "comment", Value: cfg.Comment},
+		//{Key: "comment", Value: cfg.Comment},
 		{Key: "created_by", Value: fmt.Sprintf("gpxhydrant %s", version)},
 	}
 
@@ -141,7 +147,7 @@ func getHydrantsFromOSM(osmClient *osm.Client, bds bounds) []*hydrant {
 		log.Fatalf("Unable to get map data: %s", err)
 	}
 
-	logDebugf("Retrieved %d nodes from map", len(mapData.Nodes))
+	log.Debugf("Retrieved %d nodes from map", len(mapData.Nodes))
 
 	availableHydrants := []*hydrant{}
 	for _, n := range mapData.Nodes {
@@ -164,6 +170,8 @@ func main() {
 	if err != nil {
 		log.Fatalf("Unable to log into OSM: %s", err)
 	}
+
+	osmClient.DebugHTTPRequests = log.GetLevel() == log.DebugLevel
 
 	// Retrieve currently available information from OSM
 	availableHydrants := getHydrantsFromOSM(osmClient, bds)
@@ -189,7 +197,7 @@ func updateOrCreateHydrants(hydrants, availableHydrants []*hydrant, osmClient *o
 					if err := osmClient.SaveNode(h.ToNode(), createChangeset(osmClient)); err != nil {
 						log.Fatalf("Unable to create node using the OSM API: %s", err)
 					}
-					logDebugf("Created a hydrant: %s", h.Name)
+					log.Debugf("Created a hydrant: %s", h.Name)
 				},
 			)
 			continue
@@ -201,7 +209,7 @@ func updateOrCreateHydrants(hydrants, availableHydrants []*hydrant, osmClient *o
 		}
 
 		if !found.NeedsUpdate(h) {
-			logDebugf("Found a good looking hydrant which needs no update: %#v", h)
+			log.Debugf("Found a good looking hydrant which needs no update: %#v", h)
 			// Everything matches, we don't care
 			continue
 		}
@@ -214,7 +222,7 @@ func updateOrCreateHydrants(hydrants, availableHydrants []*hydrant, osmClient *o
 				if err := osmClient.SaveNode(h.ToNode(), createChangeset(osmClient)); err != nil {
 					log.Fatalf("Unable to create node using the OSM API: %s", err)
 				}
-				logDebugf("Changed a hydrant: %s", h.Name)
+				log.Debugf("Changed a hydrant: %s", h.Name)
 			},
 		)
 	}

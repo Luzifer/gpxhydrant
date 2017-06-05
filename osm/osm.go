@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"math"
 	"net/http"
 	"strconv"
 	"time"
@@ -24,6 +25,8 @@ type Client struct {
 	APIBaseURL  string
 	HTTPClient  *http.Client
 	CurrentUser *User
+
+	DebugHTTPRequests bool
 }
 
 // New instantiates a new client and retrieves information about the current user. Set useDevServer to true to change the API URL to the api06.dev.openstreetmap.org server.
@@ -34,6 +37,8 @@ func New(username, password string, useDevServer bool) (*Client, error) {
 
 		APIBaseURL: liveAPIBaseURL,
 		HTTPClient: http.DefaultClient,
+
+		DebugHTTPRequests: false,
 	}
 
 	if useDevServer {
@@ -65,25 +70,58 @@ func (c *Client) doPlain(method, path string, body io.Reader) (string, error) {
 }
 
 func (c *Client) do(method, path string, body io.Reader) (io.ReadCloser, error) {
+	var reqBodyBuffer *bytes.Buffer = nil
+	if body != nil {
+		reqBodyBuffer = bytes.NewBufferString("")
+		io.Copy(reqBodyBuffer, body)
+
+		body = bytes.NewBuffer(reqBodyBuffer.Bytes())
+	}
+
 	req, _ := http.NewRequest(method, c.APIBaseURL+path, body)
 	req.SetBasicAuth(c.username, c.password)
+
+	if method != "GET" {
+		req.Header.Set("Content-Type", "text/xml; charset=utf-8")
+	}
 
 	res, err := c.HTTPClient.Do(req)
 	if err != nil {
 		return nil, err
 	}
 
-	if res.StatusCode != http.StatusOK {
-		d, e := ioutil.ReadAll(res.Body)
-		if e != nil {
-			return nil, fmt.Errorf("OSM API responded with status code %d and reading response failed", res.StatusCode)
+	resBody := bytes.NewBufferString("")
+	io.Copy(resBody, res.Body)
+
+	if c.DebugHTTPRequests {
+		buf := bytes.NewBufferString("")
+		fmt.Fprintf(buf, "---------- REQUEST ----------\n")
+		fmt.Fprintf(buf, "%s %s\n", method, req.URL.String())
+		for k, v := range req.Header {
+			fmt.Fprintf(buf, "%s: %s\n", k, v[0])
+		}
+		fmt.Fprintf(buf, "\n")
+		if reqBodyBuffer != nil {
+			trunc := int(math.Min(float64(reqBodyBuffer.Len()), 1024))
+			fmt.Fprintf(buf, "%s\n\n", reqBodyBuffer.String()[0:trunc])
 		}
 
-		res.Body.Close()
-		return nil, fmt.Errorf("OSM API responded with status code %d (%s)", res.StatusCode, d)
+		fmt.Fprintf(buf, "---------- RESPONSE ----------\n")
+		for k, v := range res.Header {
+			fmt.Fprintf(buf, "%s: %s\n", k, v[0])
+		}
+		fmt.Fprintf(buf, "\n")
+		trunc := int(math.Min(float64(resBody.Len()), 1024))
+		fmt.Fprintf(buf, "%s\n", resBody.String()[0:trunc])
+
+		fmt.Println(buf.String())
 	}
 
-	return res.Body, nil
+	if res.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("OSM API responded with status code %d", res.StatusCode)
+	}
+
+	return ioutil.NopCloser(resBody), nil
 }
 
 func (c *Client) doParse(method, path string, body io.Reader, output interface{}) error {
@@ -137,8 +175,12 @@ func (c *Client) GetMyChangesets(onlyOpen bool) ([]*Changeset, error) {
 
 // CreateChangeset creates a new changeset
 func (c *Client) CreateChangeset() (*Changeset, error) {
-	body := bytes.NewBuffer([]byte{})
-	if err := xml.NewEncoder(body).Encode(Wrap{Changesets: []*Changeset{{}}}); err != nil {
+	body := bytes.NewBufferString(xml.Header)
+
+	enc := xml.NewEncoder(body)
+	enc.Indent("", " ")
+
+	if err := enc.Encode(Wrap{Changesets: []*Changeset{{}}}); err != nil {
 		return nil, err
 	}
 
@@ -169,8 +211,12 @@ func (c *Client) SaveChangeset(cs *Changeset) error {
 
 	data := Wrap{Changesets: []*Changeset{cs}}
 
-	body := bytes.NewBuffer([]byte{})
-	if err := xml.NewEncoder(body).Encode(data); err != nil {
+	body := bytes.NewBufferString(xml.Header)
+
+	enc := xml.NewEncoder(body)
+	enc.Indent("", " ")
+
+	if err := enc.Encode(data); err != nil {
 		return err
 	}
 
@@ -225,8 +271,12 @@ func (c *Client) SaveNode(n *Node, cs *Changeset) error {
 
 	data := Wrap{Nodes: []*Node{n}}
 
-	body := bytes.NewBuffer([]byte{})
-	if err := xml.NewEncoder(body).Encode(data); err != nil {
+	body := bytes.NewBufferString(xml.Header)
+
+	enc := xml.NewEncoder(body)
+	enc.Indent("", " ")
+
+	if err := enc.Encode(data); err != nil {
 		return err
 	}
 
