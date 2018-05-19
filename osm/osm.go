@@ -13,8 +13,8 @@ import (
 )
 
 const (
-	liveAPIBaseURL = "http://api.openstreetmap.org/api/0.6"
-	devAPIBaseURL  = "http://api06.dev.openstreetmap.org/api/0.6"
+	liveAPIBaseURL = "https://api.openstreetmap.org/api/0.6"
+	devAPIBaseURL  = "https://api06.dev.openstreetmap.org/api/0.6"
 )
 
 // Client represents an OSM client which is capable of RW operations on the OpenStreetMap
