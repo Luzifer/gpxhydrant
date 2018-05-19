@@ -70,9 +70,9 @@ func (c *Client) doPlain(method, path string, body io.Reader) (string, error) {
 }
 
 func (c *Client) do(method, path string, body io.Reader) (io.ReadCloser, error) {
-	var reqBodyBuffer *bytes.Buffer = nil
+	var reqBodyBuffer *bytes.Buffer
 	if body != nil {
-		reqBodyBuffer = bytes.NewBufferString("")
+		reqBodyBuffer = new(bytes.Buffer)
 		io.Copy(reqBodyBuffer, body)
 
 		body = bytes.NewBuffer(reqBodyBuffer.Bytes())

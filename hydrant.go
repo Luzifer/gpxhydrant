@@ -106,7 +106,7 @@ func fromNode(in *osm.Node) (*hydrant, error) {
 	}
 
 	if !validFireHydrant {
-		return nil, fmt.Errorf("Did not find required 'emergency=fire_hydrant' tag.")
+		return nil, fmt.Errorf("did not find required 'emergency=fire_hydrant' tag")
 	}
 
 	return out, nil
