@@ -1,3 +1,7 @@
+# 0.2.1 / 2018-05-19
+
+  * Fix: Use HTTPs connections
+
 # 0.2.0 / 2017-06-05
 
   * Improve logging, fix tagging error
