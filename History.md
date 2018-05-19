@@ -1,3 +1,10 @@
+# 0.2.2 / 2018-05-20
+
+  * Fix some linter advices
+  * Vendor dependencies
+  * Add automated Github publishing
+  * Fix LICENSE, replace buttons in README
+
 # 0.2.1 / 2018-05-19
 
   * Fix: Use HTTPs connections
