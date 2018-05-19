@@ -1,6 +1,7 @@
-[![Download on GoBuilder](http://badge.luzifer.io/v1/badge?title=Download%20on&text=GoBuilder)](https://gobuilder.me/github.com/Luzifer/gpxhydrant)
-[![License: Apache v2.0](https://badge.luzifer.io/v1/badge?color=5d79b5&title=license&text=Apache+v2.0)](http://www.apache.org/licenses/LICENSE-2.0)
 [![Go Report Card](https://goreportcard.com/badge/github.com/Luzifer/gpxhydrant)](https://goreportcard.com/report/github.com/Luzifer/gpxhydrant)
+![](https://badges.fyi/github/license/Luzifer/gpxhydrant)
+![](https://badges.fyi/github/downloads/Luzifer/gpxhydrant)
+![](https://badges.fyi/github/latest-release/Luzifer/gpxhydrant)
 
 # Luzifer / gpxhydrant
 
