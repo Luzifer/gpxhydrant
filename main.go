@@ -127,7 +127,7 @@ func createChangeset(osmClient *osm.Client) *osm.Changeset {
 	log.Debugf("Working on Changeset %d", cs.ID)
 
 	cs.Tags = []osm.Tag{
-		//{Key: "comment", Value: cfg.Comment},
+		{Key: "comment", Value: cfg.Comment},
 		{Key: "created_by", Value: fmt.Sprintf("gpxhydrant %s", version)},
 	}
 
