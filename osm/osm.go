@@ -3,6 +3,7 @@ package osm
 import (
 	"bytes"
 	"encoding/xml"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -29,20 +30,32 @@ type Client struct {
 	DebugHTTPRequests bool
 }
 
-// New instantiates a new client and retrieves information about the current user. Set useDevServer to true to change the API URL to the api06.dev.openstreetmap.org server.
+// New instantiates a new client and retrieves information about the
+// current user. Set useDevServer to true to change the API URL to the
+// api06.dev.openstreetmap.org server.
 func New(username, password string, useDevServer bool) (*Client, error) {
+	if useDevServer {
+		return NewWithAPIEndpoint(username, password, devAPIBaseURL)
+	}
+	return NewWithAPIEndpoint(username, password, liveAPIBaseURL)
+}
+
+// NewWithAPIEndpoint instantiates a new client and retrieves
+// information about the current user. Set apiEndpoint to your desired API
+// endpoint (e.g. https://api06.dev.openstreetmap.org/api/0.6)
+func NewWithAPIEndpoint(username, password, apiEndpoint string) (*Client, error) {
 	out := &Client{
 		username: username,
 		password: password,
 
-		APIBaseURL: liveAPIBaseURL,
+		APIBaseURL: apiEndpoint,
 		HTTPClient: http.DefaultClient,
 
 		DebugHTTPRequests: false,
 	}
 
-	if useDevServer {
-		out.APIBaseURL = devAPIBaseURL
+	if apiEndpoint == "" {
+		return nil, errors.New("No API endpoint given")
 	}
 
 	u := &Wrap{User: &User{}}

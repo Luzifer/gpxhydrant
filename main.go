@@ -22,9 +22,10 @@ var (
 		MachRange int64  `flag:"match-range" default:"5" description:"Range of meters to match GPX hydrants to OSM nodes"`
 		NoOp      bool   `flag:"noop,n" default:"false" description:"Fetch data from OSM but do not write"`
 		OSM       struct {
+			APIURL   string `flag:"osm-apiurl" default:"https://api.openstreetmap.org/api/0.6" description:"API base url to contact"`
 			Username string `flag:"osm-user" description:"Username to log into OSM"`
 			Password string `flag:"osm-pass" description:"Password for osm-user"`
-			UseDev   bool   `flag:"osm-dev" default:"false" description:"Switch to dev API"`
+			UseDev   bool   `flag:"osm-dev" default:"false" description:"Switch to dev API (Deprecated: Use --osm-apiurl)"`
 		}
 		Pressure       int64 `flag:"pressure" default:"4" description:"Pressure of the water grid"`
 		VersionAndExit bool  `flag:"version" default:"false" description:"Print version and exit"`
@@ -78,6 +79,11 @@ func init() {
 
 	if cfg.OSM.Password == "" || cfg.OSM.Username == "" {
 		log.Fatalf("osm-pass / osm-user are required parameters")
+	}
+
+	if cfg.OSM.UseDev {
+		// Migration for deprecated flag
+		cfg.OSM.APIURL = "https://api06.dev.openstreetmap.org/api/0.6"
 	}
 }
 
@@ -166,7 +172,7 @@ func main() {
 	// Convert waypoints from GPX file to hydrants
 	hydrants, bds := hydrantsFromGPXFile()
 
-	osmClient, err := osm.New(cfg.OSM.Username, cfg.OSM.Password, cfg.OSM.UseDev)
+	osmClient, err := osm.NewWithAPIEndpoint(cfg.OSM.Username, cfg.OSM.Password, cfg.OSM.APIURL)
 	if err != nil {
 		log.Fatalf("Unable to log into OSM: %s", err)
 	}
