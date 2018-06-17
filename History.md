@@ -1,3 +1,8 @@
+# 0.3.0 / 2018-06-17
+
+  * Allow specifying API endpoint to contact
+  * re-add change set comment
+
 # 0.2.2 / 2018-05-20
 
   * Fix some linter advices
